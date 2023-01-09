@@ -45,7 +45,7 @@ def cluster_AHC(embeds, n_clusters=None, threshold=None, metric="cosine", **kwar
 ##########################################
 
 
-def cluster_SC(embeds, n_clusters=None, threshold=None, enhance_sim=True, **kwargs):
+def cluster_SC(embeds, n_clusters=None, max_speakers= None, threshold=None, enhance_sim=True, **kwargs):
     """
     Cluster embeds using Spectral Clustering
     """
@@ -59,7 +59,7 @@ def cluster_SC(embeds, n_clusters=None, threshold=None, enhance_sim=True, **kwar
     if n_clusters is None:
         (eigenvalues, eigenvectors) = compute_sorted_eigenvectors(S)
         # Get number of clusters.
-        k = compute_number_of_clusters(eigenvalues, 100, threshold)
+        k = compute_number_of_clusters(eigenvalues, max_speakers, threshold)
 
         # Get spectral embeddings.
         spectral_embeddings = eigenvectors[:, :k]

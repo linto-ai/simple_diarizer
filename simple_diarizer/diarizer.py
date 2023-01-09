@@ -56,7 +56,7 @@ class Diarizer:
 
     def setup_VAD(self):
         model, utils = torch.hub.load(
-            repo_or_dir="snakers4/silero-vad", model="silero_vad"
+            repo_or_dir="snakers4/silero-vad", model="silero_vad", onnx=True
         )
         # force_reload=True)
 
@@ -182,6 +182,7 @@ class Diarizer:
         self,
         wav_file,
         num_speakers=2,
+        max_speakers=None,
         threshold=None,
         silence_tolerance=0.2,
         enhance_sim=True,
@@ -194,6 +195,7 @@ class Diarizer:
             Inputs:
                 wav_file (path): Path to input audio file
                 num_speakers (int) or NoneType: Number of speakers to cluster to
+                max_speakers (int)
                 threshold (float) or NoneType: Threshold to cluster to if
                                                 num_speakers is not defined
                 silence_tolerance (float): Same speaker segments which are close enough together
@@ -258,6 +260,7 @@ class Diarizer:
         cluster_labels = self.cluster(
             embeds,
             n_clusters=num_speakers,
+            max_speakers=max_speakers,
             threshold=threshold,
             enhance_sim=enhance_sim,
         )
