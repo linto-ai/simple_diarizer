@@ -237,6 +237,8 @@ class Diarizer:
 
         if check_wav_16khz_mono(wav_file):
             signal, fs = torchaudio.load(wav_file)
+            info = torchaudio.info(wav_file)
+            duration=info.num_frames / info.sample_rate 
         else:
             print("Converting audio file to single channel WAV using ffmpeg...")
             converted_wavfile = os.path.join(
@@ -247,31 +249,39 @@ class Diarizer:
                 converted_wavfile
             ), "Couldn't find converted wav file, failed for some reason"
             signal, fs = torchaudio.load(converted_wavfile)
-
+            info = torchaudio.info(converted_wavfile)
+            duration=info.num_frames / info.sample_rate 
         print("Running VAD...")
         speech_ts = self.vad(signal[0])
         print("Splitting by silence found {} utterances".format(len(speech_ts)))
         
-        assert len(speech_ts) >= 1, "Couldn't find any speech during VAD"
+        #assert len(speech_ts) >= 1, "Couldn't find any speech during VAD"
+        if len(speech_ts) >= 1:
+            print("Extracting embeddings...")
+            embeds, segments = self.recording_embeds(signal, fs, speech_ts)
 
-        print("Extracting embeddings...")
-        embeds, segments = self.recording_embeds(signal, fs, speech_ts)
+            [w,k]=embeds.shape
+            if  w >= 2:
+                print('Clustering to {} speakers...'.format(num_speakers))
+                cluster_labels = self.cluster(embeds, n_clusters=num_speakers,
+                                            threshold=1e-1, enhance_sim=enhance_sim)
 
-        print("Clustering to {} speakers...".format(num_speakers))
-        cluster_labels = self.cluster(
-            embeds,
-            n_clusters=num_speakers,
-            max_speakers=max_speakers,
-            threshold=threshold,
-            enhance_sim=enhance_sim,
-        )
-
-        print("Cleaning up output...")
-        cleaned_segments = self.join_segments(cluster_labels, segments)
-        cleaned_segments = self.make_output_seconds(cleaned_segments, fs)
-        cleaned_segments = self.join_samespeaker_segments(
-            cleaned_segments, silence_tolerance=silence_tolerance
-        )
+                
+                
+                cleaned_segments = self.join_segments(cluster_labels, segments)
+                cleaned_segments = self.make_output_seconds(cleaned_segments, fs)
+                cleaned_segments = self.join_samespeaker_segments(cleaned_segments,
+                                                                silence_tolerance=silence_tolerance)
+                
+                
+            else:
+                cluster_labels =[ 1]
+                cleaned_segments = self.join_segments(cluster_labels, segments)
+                cleaned_segments = self.make_output_seconds(cleaned_segments, fs)
+                
+        else:
+            cleaned_segments = [{'start': 0, 'end': duration, 'label':'silence' , 'start_sample': 0, 'end_sample': duration*16000}]
+            
         print("Done!")
         if outfile:
             self.rttm_output(cleaned_segments, recname, outfile=outfile)
