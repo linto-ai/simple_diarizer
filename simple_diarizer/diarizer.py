@@ -280,7 +280,7 @@ class Diarizer:
                 cleaned_segments = self.make_output_seconds(cleaned_segments, fs)
                 
         else:
-            cleaned_segments = [{'start': 0, 'end': duration, 'label':'silence' , 'start_sample': 0, 'end_sample': duration*16000}]
+            cleaned_segments = []
             
         print("Done!")
         if outfile:
