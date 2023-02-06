@@ -264,7 +264,7 @@ class Diarizer:
             if  w >= 2:
                 print('Clustering to {} speakers...'.format(num_speakers))
                 cluster_labels = self.cluster(embeds, n_clusters=num_speakers,max_speakers=max_speakers,
-                                            threshold=1e-1, enhance_sim=enhance_sim)
+                                            threshold=threshold, enhance_sim=enhance_sim)
 
                 
                 

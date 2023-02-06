@@ -134,7 +134,7 @@ def row_max_norm(A):
 def sim_enhancement(A):
     func_order = [
         diagonal_fill,
-        gaussian_blur,
+        
         row_threshold_mult,
         symmetrization,
         diffusion,
