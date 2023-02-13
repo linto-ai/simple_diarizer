@@ -56,7 +56,7 @@ class Diarizer:
 
     def setup_VAD(self):
         model, utils = torch.hub.load(
-            repo_or_dir="snakers4/silero-vad", model="silero_vad", onnx=True
+            repo_or_dir="snakers4/silero-vad", model="silero_vad"#, onnx=True
         )
         # force_reload=True)
 
