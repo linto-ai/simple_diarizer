@@ -18,11 +18,11 @@ parser.add_argument(dest='outputfile', nargs="?", default=None)
 args = parser.parse_args() 
 
 WAV_FILE=args.audio_name
-NUM_SPEAKERS=args.number_of_speaker if args.number_of_speaker != "None" else None
+num_speakers=args.number_of_speaker if args.number_of_speaker != "None" else None
 max_spk= args.max_speakers
 output_file=args.outputfile
 
-segments = diar.diarize(WAV_FILE, num_speakers=None,max_speakers=max_spk,outfile=output_file)
+segments = diar.diarize(WAV_FILE, num_speakers=num_speakers,max_speakers=max_spk,outfile=output_file)
 
 
 
