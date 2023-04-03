@@ -5,7 +5,7 @@ from scipy.sparse.csgraph import laplacian
 from scipy.ndimage import gaussian_filter
 from sklearn.cluster import AgglomerativeClustering, KMeans, SpectralClustering
 from sklearn.metrics import pairwise_distances
-from .Spectral_clustering import NME_SpectralClustering
+from .spectral_clustering import NME_SpectralClustering
 
 def similarity_matrix(embeds, metric="cosine"):
     return pairwise_distances(embeds, metric=metric)
@@ -93,18 +93,14 @@ def cluster_NME_SC(embeds, n_clusters=None, max_speakers= None, threshold=None, 
         labels = NME_SpectralClustering(
                 S,
                 num_clusters=n_clusters,
-                max_num_clusters=max_speakers
-                
+                max_num_clusters=max_speakers                
             )
     else:
         labels = NME_SpectralClustering(
                 S,
-                num_clusters=n_clusters,
-                
-                
-            )
-        
-   
+                num_clusters=n_clusters         
+                )    
+            
     return labels
 
 

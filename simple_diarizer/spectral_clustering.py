@@ -83,19 +83,18 @@ Returns: cluster assignments for every speaker embedding
 def NME_SpectralClustering(
     A, num_clusters=None, max_num_clusters=10, pbest=0, pmin=3, pmax=20
 ):
-    print(num_clusters,max_num_clusters)
+    
     if pbest == 0:
         print("Selecting best number of neighbors for affinity matrix thresolding:")
         rbest = None
         kbest = None
         for p in range(pmin, pmax + 1):
             e, g, k, r = ComputeNMEParameters(A, p, max_num_clusters)
-            print("p={}, g={}, k={}, r={}, e={}".format(p, g, k, r, e))
             if rbest is None or rbest > r:
                 rbest = r
                 pbest = p
                 kbest = k
-        print("Best number of neighbors is {}".format(pbest))
+        
         num_clusters = num_clusters if num_clusters is not None else (kbest + 1)
         # Handle some edge cases in AMI SDM
         num_clusters = 4 if num_clusters == 1 else num_clusters
@@ -103,9 +102,9 @@ def NME_SpectralClustering(
             A, num_clusters, pbest
         )
     if num_clusters is None:
-        print("Compute number of clusters to generate:")
+        
         e, g, k, r = ComputeNMEParameters(A, pbest, max_num_clusters)
-        print("Number of clusters to generate is {}".format(k + 1))
+        
         return NME_SpectralClustering_sklearn(A, k + 1, pbest)
     return NME_SpectralClustering_sklearn(A, num_clusters, pbest)
 
@@ -122,7 +121,7 @@ Returns: cluster assignments for every speaker embedding
 
 
 def NME_SpectralClustering_sklearn(A, num_clusters, pbest):
-    print("Number of speakers is {}".format(num_clusters))
+    
     # Ap = Threshold(A, pbest)
     Ap = get_kneighbors_conn(A, pbest)  # thresholded and binarized
     Ap = (Ap + np.transpose(Ap)) / 2
