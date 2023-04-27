@@ -285,7 +285,7 @@ class Diarizer:
             
         print("Done!")
         if outfile:
-             self.rttm_output(cleaned_segments, recname, outfile=outfile)
+            self.rttm_output(cleaned_segments, recname, outfile=outfile)
 
         if not extra_info:
             return cleaned_segments
@@ -296,9 +296,9 @@ class Diarizer:
                     "cluster_labels": cluster_labels} 
 
     @staticmethod
-    def rttm_output(segments, recname, outfile=None):
+    def rttm_output(segments, recname, outfile=None, channel=0):
         assert outfile, "Please specify an outfile"
-        rttm_line = "SPEAKER {} 0 {} {} <NA> <NA> {} <NA> <NA>\n"
+        rttm_line = "SPEAKER {} "+str(channel)+" {} {} <NA> <NA> {} <NA> <NA>\n"
         with open(outfile, "w") as fp:
             for seg in segments:
                 start = seg["start"]
