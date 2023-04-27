@@ -187,7 +187,7 @@ class Diarizer:
         wav_file,
         num_speakers=2,
         max_speakers=None,
-        threshold=0.01,
+        threshold=None,
         silence_tolerance=0.2,
         enhance_sim=True,
         extra_info=False,
