@@ -89,11 +89,21 @@ def cluster_NME_SC(embeds, n_clusters=None, max_speakers= None, threshold=None, 
     """
     
     S = cos_similarity(embeds)
-    labels = NME_SpectralClustering(
-            S,
-            num_clusters=n_clusters,
-            max_num_clusters=max_speakers                
-        )
+
+    if n_clusters is None:
+        labels = NME_SpectralClustering(
+                S,
+                num_clusters=n_clusters,
+                max_num_clusters=max_speakers
+                
+            )
+    else:
+        labels = NME_SpectralClustering(
+                S,
+                num_clusters=n_clusters,
+                
+                
+            )
             
     return labels
 
