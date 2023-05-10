@@ -98,16 +98,14 @@ def NME_SpectralClustering(
                 kbest = k
         
         num_clusters = num_clusters if num_clusters is not None else (kbest + 1)
-        # Handle some edge cases in AMI SDM
-        num_clusters = 4 if num_clusters == 1 else num_clusters
         return NME_SpectralClustering_sklearn(
             A, num_clusters, pbest
         )
+
     if num_clusters is None:
-        
         e, g, k, r = ComputeNMEParameters(A, pbest, max_num_clusters)
-        
         return NME_SpectralClustering_sklearn(A, k + 1, pbest)
+
     return NME_SpectralClustering_sklearn(A, num_clusters, pbest)
 
 
