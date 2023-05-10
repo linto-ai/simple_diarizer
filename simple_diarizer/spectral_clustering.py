@@ -83,7 +83,8 @@ Returns: cluster assignments for every speaker embedding
 def NME_SpectralClustering(
     A, num_clusters=None, max_num_clusters=None, pbest=0, pmin=3, pmax=20
 ):
-    if max_num_clusters is None and num_clusters is not None:
+    if max_num_clusters is None:
+        assert num_clusters is not None, "Cannot have both num_clusters and max_num_clusters be None"
         max_num_clusters = num_clusters
 
     if pbest == 0:
