@@ -81,7 +81,7 @@ Returns: cluster assignments for every speaker embedding
 
 
 def NME_SpectralClustering(
-    A, num_clusters=None, max_num_clusters=None, pbest=0, pmin=3, pmax=20
+    A, num_clusters=None, max_num_clusters=None, pbest=0, pmin=2, pmax=20
 ):
     if max_num_clusters is None:
         assert num_clusters is not None, "Cannot have both num_clusters and max_num_clusters be None"
@@ -93,7 +93,13 @@ def NME_SpectralClustering(
         kbest = None
         for p in range(pmin, pmax + 1):
             e, g, k, r = ComputeNMEParameters(A, p, max_num_clusters)
+            print(f"NOCOMMIT {p=} {k=} len(e)={len(e)} {g=} {r=}")
             if rbest is None or rbest > r:
+                # NOCOMMIT
+                import matplotlib.pyplot as plt
+                plt.plot(e[:max_num_clusters], '-', label=f"{r=} {p=} {k=}")
+                plt.legend()
+                print(f"NOCOMMIT BEST")
                 rbest = r
                 pbest = p
                 kbest = k
