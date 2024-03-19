@@ -15,7 +15,7 @@ from .utils import check_wav_16khz_mono, convert_wavfile
 
 class Diarizer:
     def __init__(
-        self, embed_model="xvec", cluster_method="sc", window=1.5, period=0.75
+        self, embed_model="xvec", cluster_method="sc", window=1.5, period=0.75, USE_GPU=False
     ):
 
         assert embed_model in [
@@ -38,9 +38,16 @@ class Diarizer:
 
         self.vad_model, self.get_speech_ts = self.setup_VAD()
 
-        self.run_opts = (
-            {"device": "cuda:0"} if torch.cuda.is_available() else {"device": "cpu"}
-        )
+        self.USE_GPU=USE_GPU
+        if self.USE_GPU==True:
+             self.run_opts = ({"device": "cuda:0"} if torch.cuda.is_available() else {"device": "cpu"})
+        elif self.USE_GPU==False:
+            self.run_opts = ({"device": "cpu"})
+
+         
+        #self.run_opts = (
+           # {"device": "cuda:0"} if torch.cuda.is_available() else {"device": "cpu"}
+        #)
 
         if embed_model == "xvec":
             self.embed_model = EncoderClassifier.from_hparams(
@@ -57,6 +64,7 @@ class Diarizer:
 
         self.window = window
         self.period = period
+        
 
     def setup_VAD(self):
         model, utils = torch.hub.load(
@@ -95,7 +103,7 @@ class Diarizer:
 
         segments.append([start, len_signal - 1])
         embeds = []
-
+        
         with torch.no_grad():
             for i, j in segments:
                 signal_seg = signal[:, i:j]
@@ -192,7 +200,11 @@ class Diarizer:
         enhance_sim=True,
         extra_info=False,
         outfile=None,
+        
     ):
+        
+        
+        
         """
         Diarize a 16khz mono wav file, produces list of segments
 

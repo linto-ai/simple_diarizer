@@ -14,17 +14,23 @@ parser.add_argument("--number_of_speakers", dest='number_of_speaker', default=No
 parser.add_argument("--max_speakers", dest='max_speakers', default=25, type=int, help="Maximum number of speakers (if number of speaker is unknown)")
 parser.add_argument("--embed_model", dest='embed_model', default="ecapa", type=str, help="Name of embedding")
 parser.add_argument("--cluster_method", dest='cluster_method', default="nme-sc", type=str, help="Clustering method")
+parser.add_argument("--gpu", dest='gpu', default=False, type=bool, help="use of GPU")
 args = parser.parse_args() 
 
 diar = Diarizer(
    embed_model=args.embed_model,  # 'xvec' and 'ecapa' supported
-   cluster_method=args.cluster_method  # 'ahc' 'sc' and 'nme-sc' supported
+   cluster_method=args.cluster_method,  # 'ahc' 'sc' and 'nme-sc' supported
+   USE_GPU=args.gpu
 )
 
 WAV_FILE=args.audio_name
 num_speakers=args.number_of_speaker if args.number_of_speaker != "None" else None
 max_spk= args.max_speakers
 output_file=args.outputfile
+
+
+
+
 
 t0 = time.time() 
 
@@ -73,5 +79,5 @@ if not output_file:
    json["speakers"] = list(_speakers.values())
    json["segments"] = _segments
 
-   pprint.pprint(json)
+   #pprint.pprint(json)
 
