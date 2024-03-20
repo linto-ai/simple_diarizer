@@ -15,7 +15,7 @@ from .utils import check_wav_16khz_mono, convert_wavfile
 
 class Diarizer:
     def __init__(
-        self, embed_model="xvec", cluster_method="sc", window=1.5, period=0.75, USE_GPU=False
+        self, embed_model="xvec", cluster_method="sc", window=1.5, period=0.75, device=None
     ):
 
         assert embed_model in [
@@ -38,33 +38,33 @@ class Diarizer:
 
         self.vad_model, self.get_speech_ts = self.setup_VAD()
 
-        self.USE_GPU=USE_GPU
-        if self.USE_GPU==True:
-             self.run_opts = ({"device": "cuda:0"} if torch.cuda.is_available() else {"device": "cpu"})
-        elif self.USE_GPU==False:
-            self.run_opts = ({"device": "cpu"})
-
+        if device is None:
+            self.device = "cuda" if  torch.cuda.is_available() else "cpu"
+        elif device=="cpu":
+            os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # force torch.cuda.is_available() = False
+            self.device = "cpu" 
+        elif device=="cuda": 
+            os.environ['CUDA_VISIBLE_DEVICES'] = '0'          
+            device_num=torch.cuda.current_device()
+            to_cuda = f'cuda:{device_num}'                        
+            self.device = to_cuda
          
-        #self.run_opts = (
-           # {"device": "cuda:0"} if torch.cuda.is_available() else {"device": "cpu"}
-        #)
-
         if embed_model == "xvec":
             self.embed_model = EncoderClassifier.from_hparams(
                 source="speechbrain/spkrec-xvect-voxceleb",
                 savedir="pretrained_models/spkrec-xvect-voxceleb",
-                run_opts=self.run_opts,
+                run_opts={"device": self.device},
             )
         if embed_model == "ecapa":
             self.embed_model = EncoderClassifier.from_hparams(
                 source="speechbrain/spkrec-ecapa-voxceleb",
                 savedir="pretrained_models/spkrec-ecapa-voxceleb",
-                run_opts=self.run_opts,
+                run_opts={"device": self.device},
             )
 
         self.window = window
         self.period = period
-        
+    
 
     def setup_VAD(self):
         model, utils = torch.hub.load(
