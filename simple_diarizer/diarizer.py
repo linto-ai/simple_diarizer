@@ -3,7 +3,6 @@ import sys
 from copy import deepcopy
 
 import numpy as np
-import pandas as pd
 import torch
 import torchaudio
 from speechbrain.inference.speaker import EncoderClassifier
@@ -15,7 +14,13 @@ from .utils import check_wav_16khz_mono, convert_wavfile
 
 class Diarizer:
     def __init__(
-        self, embed_model="xvec", cluster_method="sc", window=1.5, period=0.75
+        self,
+        embed_model="xvec",
+        cluster_method="sc",
+        window=1.5,
+        period=0.75,
+        device=None,
+        device_vad="cpu",
     ):
 
         assert embed_model in [
@@ -35,33 +40,44 @@ class Diarizer:
         if cluster_method == "nme-sc":
             self.cluster = cluster_NME_SC
 
+        default_device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device_vad is None:
+            device_vad = default_device
 
-        self.vad_model, self.get_speech_ts = self.setup_VAD()
+        self.vad_model, self.get_speech_ts = self.setup_VAD(device_vad)
 
-        self.run_opts = (
-            {"device": "cuda:0"} if torch.cuda.is_available() else {"device": "cpu"}
-        )
+        if device is None:
+            device = default_device
+
+        print(f"Devices: VAD={device_vad}, embedding={device}")
 
         if embed_model == "xvec":
             self.embed_model = EncoderClassifier.from_hparams(
                 source="speechbrain/spkrec-xvect-voxceleb",
                 savedir="pretrained_models/spkrec-xvect-voxceleb",
-                run_opts=self.run_opts,
+                run_opts={"device": device},
             )
-        if embed_model == "ecapa":
+        elif embed_model == "ecapa":
             self.embed_model = EncoderClassifier.from_hparams(
                 source="speechbrain/spkrec-ecapa-voxceleb",
                 savedir="pretrained_models/spkrec-ecapa-voxceleb",
-                run_opts=self.run_opts,
+                run_opts={"device": device},
             )
 
         self.window = window
         self.period = period
 
-    def setup_VAD(self):
+    def setup_VAD(self, device):
+        self.device_vad = device
+        use_gpu = device != "cpu"
         model, utils = torch.hub.load(
-            repo_or_dir="snakers4/silero-vad", model="silero_vad", onnx=True
+            repo_or_dir="snakers4/silero-vad",
+            model="silero_vad",
+            onnx=not use_gpu,
+            # map_location=device
         )
+        if use_gpu:
+            model = model.to(device)
         # force_reload=True)
 
         get_speech_ts = utils[0]
@@ -71,7 +87,7 @@ class Diarizer:
         """
         Runs the VAD model on the signal
         """
-        return self.get_speech_ts(signal, self.vad_model)
+        return self.get_speech_ts(signal.to(self.device_vad), self.vad_model)
 
     def windowed_embeds(self, signal, fs, window=1.5, period=0.75):
         """
@@ -238,7 +254,7 @@ class Diarizer:
         Uses AHC/SC/NME-SC to cluster
         """
         recname = os.path.splitext(os.path.basename(wav_file))[0]
-        
+
         if check_wav_16khz_mono(wav_file):
             signal, fs = torchaudio.load(wav_file)
         else:
@@ -255,34 +271,37 @@ class Diarizer:
         print("Running VAD...")
         speech_ts = self.vad(signal[0])
         print("Splitting by silence found {} utterances".format(len(speech_ts)))
-        #assert len(speech_ts) >= 1, "Couldn't find any speech during VAD"
+        # assert len(speech_ts) >= 1, "Couldn't find any speech during VAD"
 
         if len(speech_ts) >= 1:
             print("Extracting embeddings...")
             embeds, segments = self.recording_embeds(signal, fs, speech_ts)
 
-            [w,k]=embeds.shape
-            if  w >= 2:
-                print('Clustering to {} speakers...'.format(num_speakers))
-                cluster_labels = self.cluster(embeds, n_clusters=num_speakers,max_speakers=max_speakers,
-                                            threshold=threshold, enhance_sim=enhance_sim)
+            [w, k] = embeds.shape
+            if w >= 2:
+                print("Clustering to {} speakers...".format(num_speakers))
+                cluster_labels = self.cluster(
+                    embeds,
+                    n_clusters=num_speakers,
+                    max_speakers=max_speakers,
+                    threshold=threshold,
+                    enhance_sim=enhance_sim,
+                )
 
-                
-                
                 cleaned_segments = self.join_segments(cluster_labels, segments)
                 cleaned_segments = self.make_output_seconds(cleaned_segments, fs)
-                cleaned_segments = self.join_samespeaker_segments(cleaned_segments,
-                                                                silence_tolerance=silence_tolerance)
-                
-                
+                cleaned_segments = self.join_samespeaker_segments(
+                    cleaned_segments, silence_tolerance=silence_tolerance
+                )
+
             else:
-                cluster_labels =[ 1]
+                cluster_labels = [1]
                 cleaned_segments = self.join_segments(cluster_labels, segments)
                 cleaned_segments = self.make_output_seconds(cleaned_segments, fs)
-                
+
         else:
             cleaned_segments = []
-            
+
         print("Done!")
         if outfile:
             self.rttm_output(cleaned_segments, recname, outfile=outfile)
@@ -290,15 +309,17 @@ class Diarizer:
         if not extra_info:
             return cleaned_segments
         else:
-            return {"clean_segments": cleaned_segments,
-                    "embeds": embeds,
-                    "segments": segments,
-                    "cluster_labels": cluster_labels} 
+            return {
+                "clean_segments": cleaned_segments,
+                "embeds": embeds,
+                "segments": segments,
+                "cluster_labels": cluster_labels,
+            }
 
     @staticmethod
     def rttm_output(segments, recname, outfile=None, channel=0):
         assert outfile, "Please specify an outfile"
-        rttm_line = "SPEAKER {} "+str(channel)+" {} {} <NA> <NA> {} <NA> <NA>\n"
+        rttm_line = "SPEAKER {} " + str(channel) + " {} {} <NA> <NA> {} <NA> <NA>\n"
         with open(outfile, "w") as fp:
             for seg in segments:
                 start = seg["start"]
@@ -371,66 +392,6 @@ class Diarizer:
             final_segments.append(newseg)
 
         return final_segments
-
-    def match_diarization_to_transcript_ctm(self, segments, ctm_file):
-        """
-        Match the output of .diarize to a ctm file produced by asr
-        """
-        ctm_df = pd.read_csv(
-            ctm_file,
-            delimiter=" ",
-            names=["utt", "channel", "start", "offset", "word", "confidence"],
-        )
-        ctm_df["end"] = ctm_df["start"] + ctm_df["offset"]
-
-        starts = ctm_df["start"].values
-        ends = ctm_df["end"].values
-        words = ctm_df["word"].values
-
-        # Get the earliest start from either diar output or asr output
-        earliest_start = np.min([ctm_df["start"].values[0], segments[0]["start"]])
-
-        worded_segments = self.join_samespeaker_segments(segments)
-        worded_segments[0]["start"] = earliest_start
-        cutoffs = []
-
-        for seg in worded_segments:
-            end_idx = np.searchsorted(ctm_df["end"].values, seg["end"], side="left") - 1
-            cutoffs.append(end_idx)
-
-        indexes = [[0, cutoffs[0]]]
-        for c in cutoffs[1:]:
-            indexes.append([indexes[-1][-1], c])
-
-        indexes[-1][-1] = len(words)
-
-        final_segments = []
-
-        for i, seg in enumerate(worded_segments):
-            s_idx, e_idx = indexes[i]
-            words = ctm_df["word"].values[s_idx:e_idx]
-            seg["words"] = " ".join(words)
-            if len(words) >= 1:
-                final_segments.append(seg)
-            else:
-                print(
-                    "Removed segment between {} and {} as no words were matched".format(
-                        seg["start"], seg["end"]
-                    )
-                )
-
-        return final_segments
-
-    @staticmethod
-    def nice_text_output(worded_segments, outfile):
-        with open(outfile, "w") as fp:
-            for seg in worded_segments:
-                fp.write(
-                    "[{} to {}] Speaker {}: \n".format(
-                        round(seg["start"], 2), round(seg["end"], 2), seg["label"]
-                    )
-                )
-                fp.write("{}\n\n".format(seg["words"]))
 
 
 if __name__ == "__main__":
